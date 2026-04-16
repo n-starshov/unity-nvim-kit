@@ -1,0 +1,23 @@
+#!/bin/sh
+
+set -eu
+
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/nvim"
+SOCKET="${UNITY_NVIM_SOCKET:-$STATE_DIR/unity.sock}"
+NVIM_BIN="${UNITY_NVIM_BIN:-/opt/homebrew/bin/nvim}"
+
+mkdir -p "$STATE_DIR"
+
+if [ -e "$SOCKET" ] && [ ! -S "$SOCKET" ]; then
+  rm -f "$SOCKET"
+fi
+
+if [ -S "$SOCKET" ]; then
+  if "$NVIM_BIN" --server "$SOCKET" --remote-expr "1" >/dev/null 2>&1; then
+    exec "$NVIM_BIN" --server "$SOCKET" --remote-ui
+  fi
+
+  rm -f "$SOCKET"
+fi
+
+exec "$NVIM_BIN" --listen "$SOCKET" "$@"

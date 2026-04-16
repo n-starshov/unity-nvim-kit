@@ -1,0 +1,73 @@
+#!/bin/sh
+
+set -eu
+
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/nvim"
+SOCKET="${UNITY_NVIM_SOCKET:-$STATE_DIR/unity.sock}"
+NVIM_BIN="${UNITY_NVIM_BIN:-/opt/homebrew/bin/nvim}"
+TERMINAL_APP="${UNITY_NVIM_TERMINAL_APP:-/Applications/Ghostty.app}"
+OPEN_BIN="${UNITY_NVIM_OPEN_BIN:-open}"
+
+mkdir -p "$STATE_DIR"
+
+file=""
+line=1
+column=1
+
+is_integer() {
+  case "$1" in
+    ''|*[!0-9]*)
+      return 1
+      ;;
+    *)
+      return 0
+      ;;
+  esac
+}
+
+parse_target() {
+  target="$1"
+
+  case "$target" in
+    *:[0-9]*:[0-9]*)
+      file=${target%:[0-9]*:[0-9]*}
+      rest=${target#"$file":}
+      line=${rest%%:*}
+      column=${rest##*:}
+      ;;
+    *:[0-9]*)
+      file=${target%:[0-9]*}
+      line=${target##*:}
+      ;;
+    *)
+      file="$target"
+      ;;
+  esac
+}
+
+if [ "$#" -lt 1 ]; then
+  echo "usage: unity-nvim-open <file> [line] [column]" >&2
+  exit 64
+fi
+
+parse_target "$1"
+shift
+
+if [ "$#" -gt 0 ] && is_integer "$1"; then
+  line="$1"
+  shift
+fi
+
+if [ "$#" -gt 0 ] && is_integer "$1"; then
+  column="$1"
+fi
+
+if [ -S "$SOCKET" ]; then
+  if "$NVIM_BIN" --server "$SOCKET" --remote "$file" >/dev/null 2>&1; then
+    keys="<C-\\><C-N>:call cursor(${line},${column})<CR>zz"
+    "$NVIM_BIN" --server "$SOCKET" --remote-send "$keys" >/dev/null 2>&1 || true
+    exit 0
+  fi
+fi
+
+exec "$OPEN_BIN" -na "$TERMINAL_APP" --args -e "$NVIM_BIN" --listen "$SOCKET" "$file" "+call cursor(${line}, ${column})"
