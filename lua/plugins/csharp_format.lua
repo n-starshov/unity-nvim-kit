@@ -73,6 +73,33 @@ local function relative_path(base, path)
   return vim.fs.basename(path)
 end
 
+local function project_root(filename)
+  local target = project_target(filename)
+  if target then
+    return vim.fs.dirname(target)
+  end
+end
+
+local function is_unity_root(root)
+  if not root or root == "" then
+    return false
+  end
+
+  for _, marker in ipairs({ "Assets", "Packages", "ProjectSettings" }) do
+    local path = vim.fs.joinpath(root, marker)
+    local stat = vim.uv.fs_stat(path)
+    if not stat or stat.type ~= "directory" then
+      return false
+    end
+  end
+
+  return true
+end
+
+local function is_unity_file(filename)
+  return is_unity_root(project_root(filename))
+end
+
 local function cleanup_formatter(profile)
   local wrapper = vim.fs.joinpath(vim.fn.stdpath("config"), "bin", "csharp-cleanupcode")
   return {
@@ -88,8 +115,7 @@ local function cleanup_formatter(profile)
     end,
     stdin = true,
     cwd = function(_, ctx)
-      local target = project_target(ctx.filename)
-      return target and vim.fs.dirname(target) or ctx.dirname
+      return project_root(ctx.filename) or ctx.dirname
     end,
     env = function()
       return {
@@ -140,6 +166,18 @@ return {
       },
     },
     init = function()
+      local group = vim.api.nvim_create_augroup("unity-csharp-autoformat", { clear = true })
+      vim.api.nvim_create_autocmd({ "BufReadPost", "BufNewFile" }, {
+        group = group,
+        pattern = "*.cs",
+        callback = function(event)
+          local filename = vim.api.nvim_buf_get_name(event.buf)
+          if filename ~= "" and is_unity_file(filename) then
+            vim.b[event.buf].autoformat = false
+          end
+        end,
+      })
+
       vim.api.nvim_create_user_command("CsharpCleanup", function()
         run_cleanup("Built-in: Reformat & Apply Syntax Style")
       end, { desc = "Run JetBrains CleanupCode for current C# buffer" })
