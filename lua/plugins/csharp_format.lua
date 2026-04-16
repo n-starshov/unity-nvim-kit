@@ -106,7 +106,7 @@ end
 
 local function run_cleanup(profile)
   require("conform").format({
-    async = false,
+    async = true,
     lsp_format = "never",
     formatters = { profile == "Built-in: Reformat Code" and "jb_reformat_code" or "jb_cleanupcode" },
     timeout_ms = 30000,
