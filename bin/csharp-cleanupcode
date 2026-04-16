@@ -1,0 +1,57 @@
+#!/bin/sh
+
+set -eu
+
+if [ "$#" -lt 2 ]; then
+  echo "usage: csharp-cleanupcode <file> <profile> [target] [include]" >&2
+  exit 2
+fi
+
+FILE=$1
+PROFILE=$2
+TARGET=${3-}
+INCLUDE=${4-}
+
+JB_BIN=${JB_CLEANUPCODE_BIN:-}
+if [ -z "$JB_BIN" ]; then
+  for candidate in "$HOME/.dotnet/tools/jb" "$(command -v jb 2>/dev/null || true)"; do
+    if [ -n "$candidate" ] && [ -x "$candidate" ]; then
+      JB_BIN=$candidate
+      break
+    fi
+  done
+fi
+
+if [ -z "$JB_BIN" ]; then
+  echo "jb command not found" >&2
+  exit 127
+fi
+
+TMP_BACKUP=$(mktemp "${TMPDIR:-/tmp}/csharp-cleanupcode.backup.XXXXXX")
+cleanup() {
+  rm -f "$TMP_BACKUP"
+}
+trap cleanup EXIT INT TERM
+
+if [ -f "$FILE" ]; then
+  cp "$FILE" "$TMP_BACKUP"
+else
+  : > "$TMP_BACKUP"
+fi
+
+cat > "$FILE"
+
+set -- cleanupcode "$FILE" "--profile=$PROFILE" --verbosity=WARN --no-updates
+if [ -n "$TARGET" ]; then
+  set -- cleanupcode "$TARGET" "--profile=$PROFILE" --verbosity=WARN --no-updates
+  if [ -n "$INCLUDE" ]; then
+    set -- "$@" "--include=$INCLUDE"
+  fi
+fi
+
+if ! "$JB_BIN" "$@"; then
+  cp "$TMP_BACKUP" "$FILE"
+  exit 1
+fi
+
+cat "$FILE"
