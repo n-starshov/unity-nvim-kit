@@ -47,6 +47,7 @@ local function build_path()
     "/Users/REDACTED/.dotnet/tools",
     "/Users/REDACTED/.local/share/nvim/mason/bin",
     "/opt/homebrew/bin",
+    "/Library/Frameworks/Mono.framework/Versions/Current/Commands",
   }) do
     path = prepend_path(path, entry)
   end
@@ -70,6 +71,14 @@ local function roslyn_cmd()
   return "roslyn-language-server"
 end
 
+local function first_existing(paths)
+  for _, path in ipairs(paths) do
+    if path and path ~= "" and vim.uv.fs_stat(path) then
+      return path
+    end
+  end
+end
+
 return {
   {
     "Hoffs/omnisharp-extended-lsp.nvim",
@@ -91,9 +100,30 @@ return {
       local roslyn = opts.servers.roslyn_ls == true and {} or (opts.servers.roslyn_ls or {})
       local cmd_env = roslyn.cmd_env or {}
       local root = dotnet_root()
+      local mono_root = first_existing({
+        "/Library/Frameworks/Mono.framework/Versions/Current",
+        "/Library/Frameworks/Mono.framework/Versions/6.12.0",
+      })
+      local mono_commands = mono_root and (mono_root .. "/Commands") or nil
+      local mono_msbuild_bin = mono_root and (mono_root .. "/lib/mono/msbuild/Current/bin") or nil
+      local mono_xbuild = mono_root and (mono_root .. "/lib/mono/xbuild") or nil
+      local mono_msbuild = mono_commands and (mono_commands .. "/msbuild") or nil
 
       if root then
         cmd_env.DOTNET_ROOT = root
+      end
+
+      if mono_root then
+        cmd_env.MONO_GAC_PREFIX = mono_root
+      end
+      if mono_msbuild and vim.fn.executable(mono_msbuild) == 1 then
+        cmd_env.MSBUILD_EXE_PATH = mono_msbuild
+      end
+      if mono_msbuild_bin and vim.uv.fs_stat(mono_msbuild_bin) then
+        cmd_env.MSBuildSDKsPath = mono_msbuild_bin .. "/Sdks"
+      end
+      if mono_xbuild and vim.uv.fs_stat(mono_xbuild) then
+        cmd_env.MSBuildExtensionsPath = mono_xbuild
       end
 
       cmd_env.PATH = build_path()
@@ -108,13 +138,12 @@ return {
         "--extensionLogDirectory",
         vim.fs.joinpath(vim.uv.os_tmpdir(), "roslyn_ls/logs"),
         "--stdio",
-        "--autoLoadProjects",
       }
       roslyn.cmd_env = cmd_env
       roslyn.settings = vim.tbl_deep_extend("force", roslyn.settings or {}, {
         ["csharp|background_analysis"] = {
-          dotnet_analyzer_diagnostics_scope = "fullSolution",
-          dotnet_compiler_diagnostics_scope = "fullSolution",
+          dotnet_analyzer_diagnostics_scope = "openFiles",
+          dotnet_compiler_diagnostics_scope = "openFiles",
         },
       })
 
