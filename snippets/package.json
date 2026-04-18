@@ -1,0 +1,14 @@
+{
+  "name": "unity-nvim-snippets",
+  "contributes": {
+    "snippets": [
+      {
+        "language": [
+          "csharp",
+          "cs"
+        ],
+        "path": "./cs.json"
+      }
+    ]
+  }
+}

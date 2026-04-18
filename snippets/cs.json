@@ -1,0 +1,269 @@
+{
+  "Unity MonoBehaviour Class": {
+    "prefix": "umb",
+    "body": [
+      "using UnityEngine;",
+      "",
+      "public class ${1:ClassName} : MonoBehaviour",
+      "{",
+      "\t[SerializeField] private ${2:GameObject} ${3:target};",
+      "",
+      "\tprivate void Awake()",
+      "\t{",
+      "\t\t${0}",
+      "\t}",
+      "",
+      "\tprivate void Start()",
+      "\t{",
+      "\t}",
+      "",
+      "\tprivate void Update()",
+      "\t{",
+      "\t}",
+      "}"
+    ],
+    "description": "Unity MonoBehaviour class skeleton"
+  },
+  "Unity Serialized Field": {
+    "prefix": "usf",
+    "body": [
+      "[SerializeField] private ${1:int} ${2:value};"
+    ],
+    "description": "Serialized private field"
+  },
+  "Unity Header + Serialized Field": {
+    "prefix": "uhf",
+    "body": [
+      "[Header(\"${1:Header}\")]",
+      "[SerializeField] private ${2:int} ${3:value};"
+    ],
+    "description": "Header and serialized field"
+  },
+  "Unity RequireComponent Class": {
+    "prefix": "urc",
+    "body": [
+      "using UnityEngine;",
+      "",
+      "[RequireComponent(typeof(${1:Rigidbody}))]",
+      "public class ${2:ClassName} : MonoBehaviour",
+      "{",
+      "\tprivate ${1} _${3:component};",
+      "",
+      "\tprivate void Awake()",
+      "\t{",
+      "\t\t_${3:component} = GetComponent<${1}>();",
+      "\t\t${0}",
+      "\t}",
+      "}"
+    ],
+    "description": "Class with RequireComponent and cached component"
+  },
+  "Unity Singleton MonoBehaviour": {
+    "prefix": "usingle",
+    "body": [
+      "public class ${1:ClassName} : MonoBehaviour",
+      "{",
+      "\tpublic static ${1:ClassName} Instance { get; private set; }",
+      "",
+      "\tprivate void Awake()",
+      "\t{",
+      "\t\tif (Instance != null && Instance != this)",
+      "\t\t{",
+      "\t\t\tDestroy(gameObject);",
+      "\t\t\treturn;",
+      "\t\t}",
+      "",
+      "\t\tInstance = this;",
+      "\t\tDontDestroyOnLoad(gameObject);",
+      "\t\t${0}",
+      "\t}",
+      "}"
+    ],
+    "description": "Simple singleton MonoBehaviour pattern"
+  },
+  "Unity Coroutine Method": {
+    "prefix": "uco",
+    "body": [
+      "private IEnumerator ${1:RoutineName}()",
+      "{",
+      "\t${0:yield return null;}",
+      "}"
+    ],
+    "description": "Coroutine method skeleton"
+  },
+  "Unity Start Coroutine": {
+    "prefix": "ustartco",
+    "body": [
+      "StartCoroutine(${1:RoutineName}());"
+    ],
+    "description": "Start coroutine call"
+  },
+  "Unity Stop Coroutine": {
+    "prefix": "ustopco",
+    "body": [
+      "StopCoroutine(${1:RoutineName}());"
+    ],
+    "description": "Stop coroutine call"
+  },
+  "Unity TryGetComponent": {
+    "prefix": "utryget",
+    "body": [
+      "if (TryGetComponent<${1:Collider}>(${2:component}))",
+      "{",
+      "\t${0}",
+      "}"
+    ],
+    "description": "TryGetComponent block"
+  },
+  "Unity Log": {
+    "prefix": "ulog",
+    "body": [
+      "Debug.Log(\"${1:message}\", this);"
+    ],
+    "description": "Debug.Log with context"
+  },
+  "Unity Warning": {
+    "prefix": "uwarn",
+    "body": [
+      "Debug.LogWarning(\"${1:message}\", this);"
+    ],
+    "description": "Debug.LogWarning with context"
+  },
+  "Unity Error": {
+    "prefix": "uerr",
+    "body": [
+      "Debug.LogError(\"${1:message}\", this);"
+    ],
+    "description": "Debug.LogError with context"
+  },
+  "Unity Awake": {
+    "prefix": "uawake",
+    "body": [
+      "private void Awake()",
+      "{",
+      "\t${0}",
+      "}"
+    ],
+    "description": "Awake callback"
+  },
+  "Unity OnEnable": {
+    "prefix": "uonenable",
+    "body": [
+      "private void OnEnable()",
+      "{",
+      "\t${0}",
+      "}"
+    ],
+    "description": "OnEnable callback"
+  },
+  "Unity Start": {
+    "prefix": "ustart",
+    "body": [
+      "private void Start()",
+      "{",
+      "\t${0}",
+      "}"
+    ],
+    "description": "Start callback"
+  },
+  "Unity Update": {
+    "prefix": "uupdate",
+    "body": [
+      "private void Update()",
+      "{",
+      "\t${0}",
+      "}"
+    ],
+    "description": "Update callback"
+  },
+  "Unity FixedUpdate": {
+    "prefix": "ufixed",
+    "body": [
+      "private void FixedUpdate()",
+      "{",
+      "\t${0}",
+      "}"
+    ],
+    "description": "FixedUpdate callback"
+  },
+  "Unity LateUpdate": {
+    "prefix": "ulate",
+    "body": [
+      "private void LateUpdate()",
+      "{",
+      "\t${0}",
+      "}"
+    ],
+    "description": "LateUpdate callback"
+  },
+  "Unity OnDisable": {
+    "prefix": "uondisable",
+    "body": [
+      "private void OnDisable()",
+      "{",
+      "\t${0}",
+      "}"
+    ],
+    "description": "OnDisable callback"
+  },
+  "Unity OnDestroy": {
+    "prefix": "uondestroy",
+    "body": [
+      "private void OnDestroy()",
+      "{",
+      "\t${0}",
+      "}"
+    ],
+    "description": "OnDestroy callback"
+  },
+  "Unity OnValidate": {
+    "prefix": "uvalidate",
+    "body": [
+      "private void OnValidate()",
+      "{",
+      "\t${0}",
+      "}"
+    ],
+    "description": "OnValidate callback"
+  },
+  "Unity OnTriggerEnter": {
+    "prefix": "utrigger",
+    "body": [
+      "private void OnTriggerEnter(Collider ${1:other})",
+      "{",
+      "\t${0}",
+      "}"
+    ],
+    "description": "OnTriggerEnter callback"
+  },
+  "Unity OnTriggerEnter2D": {
+    "prefix": "utrigger2d",
+    "body": [
+      "private void OnTriggerEnter2D(Collider2D ${1:other})",
+      "{",
+      "\t${0}",
+      "}"
+    ],
+    "description": "OnTriggerEnter2D callback"
+  },
+  "Unity OnCollisionEnter": {
+    "prefix": "ucollision",
+    "body": [
+      "private void OnCollisionEnter(Collision ${1:collision})",
+      "{",
+      "\t${0}",
+      "}"
+    ],
+    "description": "OnCollisionEnter callback"
+  },
+  "Unity OnCollisionEnter2D": {
+    "prefix": "ucollision2d",
+    "body": [
+      "private void OnCollisionEnter2D(Collision2D ${1:collision})",
+      "{",
+      "\t${0}",
+      "}"
+    ],
+    "description": "OnCollisionEnter2D callback"
+  }
+}
