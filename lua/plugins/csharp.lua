@@ -1,3 +1,25 @@
+local function first_existing(paths)
+  for _, path in ipairs(paths) do
+    if path and path ~= "" and vim.uv.fs_stat(path) then
+      return path
+    end
+  end
+end
+
+local function split_path_list(value)
+  if not value or value == "" then
+    return {}
+  end
+  return vim.split(value, ":", { plain = true, trimempty = true })
+end
+
+local function executable_path(bin)
+  local path = vim.fn.exepath(bin)
+  if path ~= "" then
+    return path
+  end
+end
+
 local function dotnet_root()
   if vim.env.DOTNET_ROOT and vim.env.DOTNET_ROOT ~= "" then
     return vim.env.DOTNET_ROOT
@@ -6,8 +28,10 @@ local function dotnet_root()
   local dotnet = vim.fn.exepath("dotnet")
   if dotnet == "" then
     for _, candidate in ipairs({
-      "/opt/homebrew/bin/dotnet",
+      "/usr/bin/dotnet",
       "/usr/local/bin/dotnet",
+      "/usr/share/dotnet/dotnet",
+      "/opt/homebrew/bin/dotnet",
       "/usr/local/share/dotnet/dotnet",
     }) do
       if vim.fn.executable(candidate) == 1 then
@@ -26,6 +50,8 @@ local function dotnet_root()
   if prefix then
     return prefix .. "/libexec"
   end
+
+  return realpath:match("^(.*)/dotnet$")
 end
 
 local function prepend_path(path, entry)
@@ -44,11 +70,12 @@ end
 local function build_path()
   local path = vim.env.PATH or ""
   for _, entry in ipairs({
-    "/Users/REDACTED/.dotnet/tools",
-    "/Users/REDACTED/.local/share/nvim/mason/bin",
-    "/opt/homebrew/bin",
-    "/Library/Frameworks/Mono.framework/Versions/Current/Commands",
+    vim.fn.expand("~/.dotnet/tools"),
+    vim.fs.joinpath(vim.fn.stdpath("data"), "mason", "bin"),
   }) do
+    path = prepend_path(path, entry)
+  end
+  for _, entry in ipairs(split_path_list(vim.env.UNITY_NVIM_EXTRA_PATH)) do
     path = prepend_path(path, entry)
   end
   return path
@@ -69,14 +96,6 @@ local function roslyn_cmd()
   end
 
   return "roslyn-language-server"
-end
-
-local function first_existing(paths)
-  for _, path in ipairs(paths) do
-    if path and path ~= "" and vim.uv.fs_stat(path) then
-      return path
-    end
-  end
 end
 
 return {
@@ -100,30 +119,56 @@ return {
       local roslyn = opts.servers.roslyn_ls == true and {} or (opts.servers.roslyn_ls or {})
       local cmd_env = roslyn.cmd_env or {}
       local root = dotnet_root()
-      local mono_root = first_existing({
-        "/Library/Frameworks/Mono.framework/Versions/Current",
-        "/Library/Frameworks/Mono.framework/Versions/6.12.0",
-      })
-      local mono_commands = mono_root and (mono_root .. "/Commands") or nil
-      local mono_msbuild_bin = mono_root and (mono_root .. "/lib/mono/msbuild/Current/bin") or nil
-      local mono_xbuild = mono_root and (mono_root .. "/lib/mono/xbuild") or nil
-      local mono_msbuild = mono_commands and (mono_commands .. "/msbuild") or nil
 
       if root then
         cmd_env.DOTNET_ROOT = root
       end
 
-      if mono_root then
-        cmd_env.MONO_GAC_PREFIX = mono_root
+      if not cmd_env.MONO_GAC_PREFIX then
+        local mono_gac_prefix = first_existing({
+          vim.env.MONO_GAC_PREFIX,
+          vim.env.UNITY_MONO_GAC_PREFIX,
+          "/Library/Frameworks/Mono.framework/Versions/Current",
+        })
+        if mono_gac_prefix then
+          cmd_env.MONO_GAC_PREFIX = mono_gac_prefix
+        end
       end
-      if mono_msbuild and vim.fn.executable(mono_msbuild) == 1 then
-        cmd_env.MSBUILD_EXE_PATH = mono_msbuild
+
+      if not cmd_env.MSBUILD_EXE_PATH then
+        local mono_msbuild = first_existing({
+          vim.env.MSBUILD_EXE_PATH,
+          vim.env.UNITY_MSBUILD_EXE_PATH,
+          executable_path("msbuild"),
+          "/Library/Frameworks/Mono.framework/Versions/Current/Commands/msbuild",
+        })
+        if mono_msbuild then
+          cmd_env.MSBUILD_EXE_PATH = mono_msbuild
+        end
       end
-      if mono_msbuild_bin and vim.uv.fs_stat(mono_msbuild_bin) then
-        cmd_env.MSBuildSDKsPath = mono_msbuild_bin .. "/Sdks"
+
+      if not cmd_env.MSBuildSDKsPath then
+        local msbuild_sdks = first_existing({
+          vim.env.MSBuildSDKsPath,
+          vim.env.UNITY_MSBUILD_SDKS_PATH,
+          "/usr/lib/mono/msbuild/Current/bin/Sdks",
+          "/Library/Frameworks/Mono.framework/Versions/Current/lib/mono/msbuild/Current/bin/Sdks",
+        })
+        if msbuild_sdks then
+          cmd_env.MSBuildSDKsPath = msbuild_sdks
+        end
       end
-      if mono_xbuild and vim.uv.fs_stat(mono_xbuild) then
-        cmd_env.MSBuildExtensionsPath = mono_xbuild
+
+      if not cmd_env.MSBuildExtensionsPath then
+        local msbuild_extensions = first_existing({
+          vim.env.MSBuildExtensionsPath,
+          vim.env.UNITY_MSBUILD_EXTENSIONS_PATH,
+          "/usr/lib/mono/xbuild",
+          "/Library/Frameworks/Mono.framework/Versions/Current/lib/mono/xbuild",
+        })
+        if msbuild_extensions then
+          cmd_env.MSBuildExtensionsPath = msbuild_extensions
+        end
       end
 
       cmd_env.PATH = build_path()

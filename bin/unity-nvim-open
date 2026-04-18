@@ -4,9 +4,18 @@ set -eu
 
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/nvim"
 SOCKET="${UNITY_NVIM_SOCKET:-$STATE_DIR/unity.sock}"
-NVIM_BIN="${UNITY_NVIM_BIN:-/opt/homebrew/bin/nvim}"
-TERMINAL_APP="${UNITY_NVIM_TERMINAL_APP:-/Applications/Ghostty.app}"
-OPEN_BIN="${UNITY_NVIM_OPEN_BIN:-open}"
+NVIM_BIN="${UNITY_NVIM_BIN:-}"
+TERMINAL_CMD="${UNITY_NVIM_TERMINAL_CMD:-}"
+TERMINAL_APP="${UNITY_NVIM_TERMINAL_APP:-Terminal}"
+
+if [ -z "$NVIM_BIN" ]; then
+  NVIM_BIN=$(command -v nvim 2>/dev/null || true)
+fi
+
+if [ -z "$NVIM_BIN" ] || [ ! -x "$NVIM_BIN" ]; then
+  echo "nvim executable not found. Set UNITY_NVIM_BIN or add nvim to PATH." >&2
+  exit 127
+fi
 
 mkdir -p "$STATE_DIR"
 
@@ -45,6 +54,47 @@ parse_target() {
   esac
 }
 
+launch_new_session() {
+  set -- "$NVIM_BIN" --listen "$SOCKET" "$file" "+call cursor(${line}, ${column})"
+
+  if [ -n "$TERMINAL_CMD" ]; then
+    # shellcheck disable=SC2086
+    exec $TERMINAL_CMD "$@"
+  fi
+
+  if command -v ghostty >/dev/null 2>&1; then
+    exec ghostty -e "$@"
+  fi
+  if command -v kitty >/dev/null 2>&1; then
+    exec kitty -e "$@"
+  fi
+  if command -v wezterm >/dev/null 2>&1; then
+    exec wezterm start -- "$@"
+  fi
+  if command -v alacritty >/dev/null 2>&1; then
+    exec alacritty -e "$@"
+  fi
+  if command -v gnome-terminal >/dev/null 2>&1; then
+    exec gnome-terminal -- "$@"
+  fi
+  if command -v konsole >/dev/null 2>&1; then
+    exec konsole -e "$@"
+  fi
+  if command -v x-terminal-emulator >/dev/null 2>&1; then
+    exec x-terminal-emulator -e "$@"
+  fi
+  if command -v xterm >/dev/null 2>&1; then
+    exec xterm -e "$@"
+  fi
+
+  if [ "$(uname -s)" = "Darwin" ] && command -v open >/dev/null 2>&1; then
+    exec open -na "$TERMINAL_APP" --args "$@"
+  fi
+
+  echo "No terminal launcher found. Start manually: $NVIM_BIN --listen \"$SOCKET\"" >&2
+  exit 127
+}
+
 if [ "$#" -lt 1 ]; then
   echo "usage: unity-nvim-open <file> [line] [column]" >&2
   exit 64
@@ -62,12 +112,18 @@ if [ "$#" -gt 0 ] && is_integer "$1"; then
   column="$1"
 fi
 
+if [ -e "$SOCKET" ] && [ ! -S "$SOCKET" ]; then
+  rm -f "$SOCKET"
+fi
+
 if [ -S "$SOCKET" ]; then
   if "$NVIM_BIN" --server "$SOCKET" --remote "$file" >/dev/null 2>&1; then
     keys="<C-\\><C-N>:call cursor(${line},${column})<CR>zz"
     "$NVIM_BIN" --server "$SOCKET" --remote-send "$keys" >/dev/null 2>&1 || true
     exit 0
   fi
+
+  rm -f "$SOCKET"
 fi
 
-exec "$OPEN_BIN" -na "$TERMINAL_APP" --args -e "$NVIM_BIN" --listen "$SOCKET" "$file" "+call cursor(${line}, ${column})"
+launch_new_session

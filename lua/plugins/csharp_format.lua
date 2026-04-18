@@ -11,13 +11,22 @@ local function prepend_path(path, entry)
   return table.concat(parts, ":")
 end
 
+local function split_path_list(value)
+  if not value or value == "" then
+    return {}
+  end
+  return vim.split(value, ":", { plain = true, trimempty = true })
+end
+
 local function build_path()
   local path = vim.env.PATH or ""
   for _, entry in ipairs({
-    "/Users/REDACTED/.dotnet/tools",
-    "/opt/homebrew/bin",
-    "/Library/Frameworks/Mono.framework/Versions/Current/Commands",
+    vim.fn.expand("~/.dotnet/tools"),
+    vim.fs.joinpath(vim.fn.stdpath("data"), "mason", "bin"),
   }) do
+    path = prepend_path(path, entry)
+  end
+  for _, entry in ipairs(split_path_list(vim.env.UNITY_NVIM_EXTRA_PATH)) do
     path = prepend_path(path, entry)
   end
   return path
